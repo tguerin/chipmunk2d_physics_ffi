@@ -1,0 +1,26 @@
+# Run with `dart run ffigen --config ffigen.yaml`.
+name: Chipmunk2dPhysicsFfiBindings
+description: |
+  Bindings for `src/chipmunk2d_physics_ffi.h`.
+
+  Regenerate bindings with `dart run ffigen --config ffigen.yaml`.
+output: 'lib/chipmunk2d_physics_ffi_bindings_generated.dart'
+headers:
+  entry-points:
+    - 'src/chipmunk2d_physics_ffi.h'
+  include-directives:
+    - 'src/chipmunk2d_physics_ffi.h'
+compiler-opts:
+  - '-I./chipmunk2d/include'
+  - '-I./src'
+  - '-DCP_USE_CGTYPES=0'
+ffi-native:
+  library: chipmunk2d_physics_ffi
+  asset-id: package:chipmunk2d_physics_ffi/chipmunk2d_physics_ffi
+preamble: |
+  // ignore_for_file: always_specify_types
+  // ignore_for_file: camel_case_types
+  // ignore_for_file: non_constant_identifier_names
+comments:
+  style: any
+  length: full

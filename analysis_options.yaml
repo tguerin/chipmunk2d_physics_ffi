@@ -1,0 +1,28 @@
+include: package:very_good_analysis/analysis_options.yaml
+
+analyzer:
+  exclude:
+    - build/**
+    - .dart_tool/**
+    - example/build/**
+  errors:
+    lines_longer_than_80_chars: ignore
+    sort_constructors_first: ignore
+    sort_unnamed_constructors_first: ignore
+    use_super_parameters: ignore
+    prefer_const_constructors: ignore
+    prefer_int_literals: ignore
+    avoid_equals_and_hash_code_on_mutable_classes: ignore
+
+linter:
+  rules:
+    lines_longer_than_80_chars: false
+    sort_constructors_first: false
+    sort_unnamed_constructors_first: false
+    use_super_parameters: false
+    prefer_const_constructors: false
+    prefer_int_literals: false
+    avoid_equals_and_hash_code_on_mutable_classes: false
+
+formatter:
+  page_width: 120

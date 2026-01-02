@@ -1,0 +1,7 @@
+# Native assets configuration for chipmunk2d_physics_ffi
+# This file tells Flutter where to find the native libraries
+
+assets:
+  - path: lib/native
+    package: chipmunk2d_physics_ffi
+
