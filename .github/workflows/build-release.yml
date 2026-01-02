@@ -1,0 +1,272 @@
+name: Build and Release Chipmunk2D Libraries
+
+on:
+  workflow_dispatch:
+    inputs:
+      chipmunk_version:
+        description: 'Chipmunk2D Version (e.g., 7.0.3 or 7.0.3-patch.1 for patched)'
+        required: true
+        type: string
+        default: '7.0.3'
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download Chipmunk2D
+        shell: pwsh
+        run: |
+          $v = "${{ github.event.inputs.chipmunk_version }}"
+          # Use fork only for patched versions, otherwise use original repo
+          if ($v -match "patch") {
+            $repo = "tguerin/Chipmunk2D"
+            $tag = $v
+          } else {
+            $repo = "slembcke/Chipmunk2D"
+            $tag = "Chipmunk-$v"
+          }
+          Invoke-WebRequest -Uri "https://github.com/$repo/archive/refs/tags/$tag.tar.gz" -OutFile "chipmunk2d.tar.gz"
+          tar -xzf chipmunk2d.tar.gz
+          $extracted = Get-ChildItem -Directory | Where-Object { $_.Name -like "Chipmunk2D-*" } | Select-Object -First 1
+          Rename-Item $extracted.Name "chipmunk2d"
+
+      - name: Build
+        run: |
+          cmake -B build -S src -DCMAKE_BUILD_TYPE=Release -A x64
+          cmake --build build --config Release
+
+      - name: Package
+        shell: pwsh
+        run: |
+          mkdir dist
+          Get-ChildItem -Path build -Filter chipmunk2d_physics_ffi.dll -Recurse | Copy-Item -Destination dist/
+          cd dist
+          tar -czf ../chipmunk2d_physics_ffi-windows-x64.tar.gz chipmunk2d_physics_ffi.dll
+
+      - name: Upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-x64
+          path: chipmunk2d_physics_ffi-windows-x64.tar.gz
+
+  build-macos:
+    runs-on: macos-latest
+    strategy:
+      matrix:
+        arch: [x86_64, arm64]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download Chipmunk2D
+        run: |
+          # Use fork only for patched versions, otherwise use original repo
+          VERSION="${{ github.event.inputs.chipmunk_version }}"
+          if echo "$VERSION" | grep -q "patch"; then
+            REPO="tguerin/Chipmunk2D"
+            TAG="$VERSION"
+          else
+            REPO="slembcke/Chipmunk2D"
+            TAG="Chipmunk-$VERSION"
+          fi
+          curl -L "https://github.com/$REPO/archive/refs/tags/$TAG.tar.gz" -o chipmunk2d.tar.gz
+          tar -xzf chipmunk2d.tar.gz && mv Chipmunk2D-* chipmunk2d
+      - name: Build
+        run: |
+          cmake -B build -S src -DCMAKE_BUILD_TYPE=Release -DCMAKE_OSX_ARCHITECTURES=${{ matrix.arch }}
+          cmake --build build --config Release
+      - name: Package
+        run: |
+          find build -name "*.dylib" -exec cp {} . \;
+          tar -czf chipmunk2d_physics_ffi-macos-${{ matrix.arch }}.tar.gz *.dylib
+      - name: Upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-${{ matrix.arch }}
+          path: chipmunk2d_physics_ffi-macos-${{ matrix.arch }}.tar.gz
+
+  build-linux:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        arch: [x64, arm64]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Dependencies
+        run: sudo apt-get update && sudo apt-get install -y build-essential cmake $( [ "${{ matrix.arch }}" = "arm64" ] && echo "gcc-aarch64-linux-gnu" )
+      - name: Download Chipmunk2D
+        run: |
+          # Use fork only for patched versions, otherwise use original repo
+          VERSION="${{ github.event.inputs.chipmunk_version }}"
+          if echo "$VERSION" | grep -q "patch"; then
+            REPO="tguerin/Chipmunk2D"
+            TAG="$VERSION"
+          else
+            REPO="slembcke/Chipmunk2D"
+            TAG="Chipmunk-$VERSION"
+          fi
+          curl -L "https://github.com/$REPO/archive/refs/tags/$TAG.tar.gz" -o chipmunk2d.tar.gz
+          tar -xzf chipmunk2d.tar.gz && mv Chipmunk2D-* chipmunk2d
+      - name: Build
+        run: |
+          if [ "${{ matrix.arch }}" = "arm64" ]; then
+            cmake -B build -S src -DCMAKE_BUILD_TYPE=Release -DCMAKE_SYSTEM_NAME=Linux -DCMAKE_SYSTEM_PROCESSOR=aarch64 -DCMAKE_C_COMPILER=aarch64-linux-gnu-gcc
+          else
+            cmake -B build -S src -DCMAKE_BUILD_TYPE=Release
+          fi
+          cmake --build build --config Release
+      - name: Package
+        run: |
+          find build -name "*.so" -exec cp {} . \;
+          tar -czf chipmunk2d_physics_ffi-linux-${{ matrix.arch }}.tar.gz *.so
+      - name: Upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-${{ matrix.arch }}
+          path: chipmunk2d_physics_ffi-linux-${{ matrix.arch }}.tar.gz
+
+  build-android:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        arch: [arm64-v8a, armeabi-v7a, x86_64]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: android-actions/setup-android@v3
+      - name: Download Chipmunk2D
+        run: |
+          # Use fork only for patched versions, otherwise use original repo
+          VERSION="${{ github.event.inputs.chipmunk_version }}"
+          if echo "$VERSION" | grep -q "patch"; then
+            REPO="tguerin/Chipmunk2D"
+            TAG="$VERSION"
+          else
+            REPO="slembcke/Chipmunk2D"
+            TAG="Chipmunk-$VERSION"
+          fi
+          curl -L "https://github.com/$REPO/archive/refs/tags/$TAG.tar.gz" -o chipmunk2d.tar.gz
+          tar -xzf chipmunk2d.tar.gz && mv Chipmunk2D-* chipmunk2d
+      - name: Build
+        run: |
+          cmake -B build -S src -DCMAKE_BUILD_TYPE=Release -DCMAKE_SYSTEM_NAME=Android \
+            -DCMAKE_ANDROID_ARCH_ABI=${{ matrix.arch }} -DCMAKE_ANDROID_NDK=$ANDROID_NDK_ROOT -DCMAKE_ANDROID_STL_TYPE=c++_static
+          cmake --build build --config Release
+      - name: Package
+        run: |
+          find build -name "*.so" -exec cp {} . \;
+          tar -czf chipmunk2d_physics_ffi-android-${{ matrix.arch }}.tar.gz *.so
+      - name: Upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-${{ matrix.arch }}
+          path: chipmunk2d_physics_ffi-android-${{ matrix.arch }}.tar.gz
+
+  build-ios:
+    runs-on: macos-latest
+    strategy:
+      matrix:
+        arch: [arm64]
+        sdk: [iphoneos, iphonesimulator]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download Chipmunk2D
+        run: |
+          # Use fork only for patched versions, otherwise use original repo
+          VERSION="${{ github.event.inputs.chipmunk_version }}"
+          if echo "$VERSION" | grep -q "patch"; then
+            REPO="tguerin/Chipmunk2D"
+            TAG="$VERSION"
+          else
+            REPO="slembcke/Chipmunk2D"
+            TAG="Chipmunk-$VERSION"
+          fi
+          curl -L "https://github.com/$REPO/archive/refs/tags/$TAG.tar.gz" -o chipmunk2d.tar.gz
+          tar -xzf chipmunk2d.tar.gz && mv Chipmunk2D-* chipmunk2d
+      - name: Build
+        run: |
+          SDK_P=$(xcrun --sdk ${{ matrix.sdk }} --show-sdk-path)
+          cmake -B build -S src -DCMAKE_BUILD_TYPE=Release -DCMAKE_SYSTEM_NAME=iOS \
+            -DCMAKE_OSX_ARCHITECTURES=${{ matrix.arch }} -DCMAKE_OSX_SYSROOT=$SDK_P -DCMAKE_OSX_DEPLOYMENT_TARGET=12.0
+          cmake --build build --config Release
+      - name: Package
+        run: |
+          find build -name "*.dylib" -exec cp {} . \;
+          tar -czf chipmunk2d_physics_ffi-ios-${{ matrix.arch }}-${{ matrix.sdk }}.tar.gz *.dylib
+      - name: Upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-${{ matrix.arch }}-${{ matrix.sdk }}
+          path: chipmunk2d_physics_ffi-ios-${{ matrix.arch }}-${{ matrix.sdk }}.tar.gz
+
+  build-web:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: mymindstorm/setup-emsdk@v14
+        with:
+          version: '3.1.51'
+      - name: Download Chipmunk2D
+        run: |
+          # Use fork only for patched versions, otherwise use original repo
+          VERSION="${{ github.event.inputs.chipmunk_version }}"
+          if echo "$VERSION" | grep -q "patch"; then
+            REPO="tguerin/Chipmunk2D"
+            TAG="$VERSION"
+          else
+            REPO="slembcke/Chipmunk2D"
+            TAG="Chipmunk-$VERSION"
+          fi
+          curl -L "https://github.com/$REPO/archive/refs/tags/$TAG.tar.gz" -o chipmunk2d.tar.gz
+          tar -xzf chipmunk2d.tar.gz && mv Chipmunk2D-* chipmunk2d
+      - name: Build with Emscripten
+        run: |
+          emcmake cmake -B build -S src -DCMAKE_BUILD_TYPE=Release
+          cmake --build build --config Release
+          
+          # Verify outputs exist
+          if [ ! -f "build/chipmunk2d_physics_ffi.js" ]; then
+            echo "Error: chipmunk2d_physics_ffi.js not found"
+            exit 1
+          fi
+          if [ ! -f "build/chipmunk2d_physics_ffi.wasm" ]; then
+            echo "Error: chipmunk2d_physics_ffi.wasm not found"
+            exit 1
+          fi
+          
+          # Verify WASM file is not truncated
+          WASM_SIZE=$(stat -c%s "build/chipmunk2d_physics_ffi.wasm" 2>/dev/null || stat -f%z "build/chipmunk2d_physics_ffi.wasm")
+          if [ "$WASM_SIZE" -lt 50000 ]; then
+            echo "Error: WASM file seems too small (only $WASM_SIZE bytes)"
+            exit 1
+          fi
+      - name: Package
+        run: |
+          cp build/chipmunk2d_physics_ffi.js .
+          cp build/chipmunk2d_physics_ffi.wasm .
+          tar -czf chipmunk2d_physics_ffi-web.tar.gz chipmunk2d_physics_ffi.js chipmunk2d_physics_ffi.wasm
+      - name: Upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: web
+          path: chipmunk2d_physics_ffi-web.tar.gz
+
+  create-release:
+    needs: [build-windows, build-macos, build-linux, build-android, build-ios, build-web]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download
+        uses: actions/download-artifact@v4
+        with:
+          path: all-artifacts
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: prebuilt-${{ github.event.inputs.chipmunk_version }}
+          name: Prebuilt Libraries for Chipmunk2D ${{ github.event.inputs.chipmunk_version }}
+          body: |
+            Prebuilt Chipmunk2D FFI libraries built with Chipmunk2D version ${{ github.event.inputs.chipmunk_version }}.
+            
+            These are prebuilt binaries for all platforms. Use tag `vX.X.X` for the library releases.
+          files: all-artifacts/**/*.tar.gz
+          token: ${{ secrets.GITHUB_TOKEN }}
