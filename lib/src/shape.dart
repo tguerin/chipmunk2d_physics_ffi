@@ -1,10 +1,7 @@
-import 'dart:ffi' as ffi;
-
-import 'package:chipmunk2d_physics_ffi/chipmunk2d_physics_ffi_bindings_generated.dart' as bindings;
 import 'package:chipmunk2d_physics_ffi/src/body.dart';
 import 'package:chipmunk2d_physics_ffi/src/bounding_box.dart';
+import 'package:chipmunk2d_physics_ffi/src/platform/chipmunk_bindings.dart';
 import 'package:chipmunk2d_physics_ffi/src/vector.dart';
-import 'package:ffi/ffi.dart';
 
 /// Collision filter for shapes that controls which objects can collide.
 ///
@@ -63,17 +60,15 @@ class ShapeFilter {
     );
   }
 
-  /// Converts to native cpShapeFilter struct.
-  bindings.cpShapeFilter toNative() {
-    return bindings.cp_shape_filter_new(group, categories, mask);
-  }
-
-  /// Creates a ShapeFilter from a native cpShapeFilter struct.
-  factory ShapeFilter.fromNative(bindings.cpShapeFilter native) {
+  /// Creates a ShapeFilter from native filter values.
+  /// @param group The collision group.
+  /// @param categories The collision categories.
+  /// @param mask The collision mask.
+  factory ShapeFilter.fromNative(int group, int categories, int mask) {
     return ShapeFilter(
-      group: native.group,
-      categories: native.categories,
-      mask: native.mask,
+      group: group,
+      categories: categories,
+      mask: mask,
     );
   }
 
@@ -96,148 +91,148 @@ class ShapeFilter {
 ///
 /// See: [Chipmunk2D Shape Documentation](https://chipmunk-physics.net/release/ Chipmunk2D-Docs/#cpShape)
 abstract class Shape {
-  final ffi.Pointer<bindings.cpShape> _native;
+  final int _native;
   bool _disposed = false;
 
   /// Gets the native pointer (for internal use).
-  ffi.Pointer<bindings.cpShape> get native {
+  int get native {
     if (_disposed) throw StateError('Shape has been disposed');
     return _native;
   }
 
+  /// Creates a Shape from a native pointer (for internal use).
+  Shape.fromNative(this._native);
+
   /// Friction coefficient (0.0 = no friction, 1.0 = full friction).
   double get friction {
     if (_disposed) throw StateError('Shape has been disposed');
-    return bindings.cp_shape_get_friction(_native);
+    return cpShapeGetFriction(_native);
   }
 
   set friction(double friction) {
     if (_disposed) throw StateError('Shape has been disposed');
-    bindings.cp_shape_set_friction(_native, friction);
+    cpShapeSetFriction(_native, friction);
   }
 
   /// Elasticity (restitution) coefficient (0.0 = no bounce, 1.0 = full bounce).
   double get elasticity {
     if (_disposed) throw StateError('Shape has been disposed');
-    return bindings.cp_shape_get_elasticity(_native);
+    return cpShapeGetElasticity(_native);
   }
 
   set elasticity(double elasticity) {
     if (_disposed) throw StateError('Shape has been disposed');
-    bindings.cp_shape_set_elasticity(_native, elasticity);
+    cpShapeSetElasticity(_native, elasticity);
   }
 
   /// Collision filter that controls which objects this shape can collide with.
   ShapeFilter get filter {
     if (_disposed) throw StateError('Shape has been disposed');
-    final nativeFilter = bindings.cp_shape_get_filter(_native);
-    return ShapeFilter.fromNative(nativeFilter);
+    return cpShapeGetFilter(_native);
   }
 
   set filter(ShapeFilter filter) {
     if (_disposed) throw StateError('Shape has been disposed');
-    bindings.cp_shape_set_filter(_native, filter.toNative());
+    cpShapeSetFilter(_native, filter.group, filter.categories, filter.mask);
   }
 
   /// Mass of the shape if you are having Chipmunk calculate mass properties for you.
   double get mass {
     if (_disposed) throw StateError('Shape has been disposed');
-    return bindings.cp_shape_get_mass(_native);
+    return cpShapeGetMass(_native);
   }
 
   set mass(double mass) {
     if (_disposed) throw StateError('Shape has been disposed');
-    bindings.cp_shape_set_mass(_native, mass);
+    cpShapeSetMass(_native, mass);
   }
 
   /// Density of the shape if you are having Chipmunk calculate mass properties for you.
   double get density {
     if (_disposed) throw StateError('Shape has been disposed');
-    return bindings.cp_shape_get_density(_native);
+    return cpShapeGetDensity(_native);
   }
 
   set density(double density) {
     if (_disposed) throw StateError('Shape has been disposed');
-    bindings.cp_shape_set_density(_native, density);
+    cpShapeSetDensity(_native, density);
   }
 
   /// Calculated moment of inertia for this shape.
   double get moment {
     if (_disposed) throw StateError('Shape has been disposed');
-    return bindings.cp_shape_get_moment(_native);
+    return cpShapeGetMoment(_native);
   }
 
   /// Calculated area of this shape.
   double get area {
     if (_disposed) throw StateError('Shape has been disposed');
-    return bindings.cp_shape_get_area(_native);
+    return cpShapeGetArea(_native);
   }
 
   /// Calculated centroid of this shape.
   Vector get centerOfGravity {
     if (_disposed) throw StateError('Shape has been disposed');
-    return Vector.fromNative(bindings.cp_shape_get_center_of_gravity(_native));
+    return cpShapeGetCenterOfGravity(_native);
   }
 
   /// Bounding box that contains the shape given its current position and angle.
   BoundingBox get boundingBox {
     if (_disposed) throw StateError('Shape has been disposed');
-    return BoundingBox.fromNative(bindings.cp_shape_get_bb(_native));
+    return cpShapeGetBB(_native);
   }
 
   /// Whether the shape is set to be a sensor or not.
   /// Sensors trigger collision callbacks but don't produce collision responses.
   bool get sensor {
     if (_disposed) throw StateError('Shape has been disposed');
-    return bindings.cp_shape_get_sensor(_native) != 0;
+    return cpShapeGetSensor(_native) != 0;
   }
 
   set sensor(bool sensor) {
     if (_disposed) throw StateError('Shape has been disposed');
-    bindings.cp_shape_set_sensor(_native, sensor ? 1 : 0);
+    cpShapeSetSensor(_native, sensor ? 1 : 0);
   }
 
   /// Surface velocity of this shape.
   /// Used for moving platforms or conveyor belts.
   Vector get surfaceVelocity {
     if (_disposed) throw StateError('Shape has been disposed');
-    return Vector.fromNative(bindings.cp_shape_get_surface_velocity(_native));
+    return cpShapeGetSurfaceVelocity(_native);
   }
 
   set surfaceVelocity(Vector surfaceVelocity) {
     if (_disposed) throw StateError('Shape has been disposed');
-    bindings.cp_shape_set_surface_velocity(_native, surfaceVelocity.toNative());
+    cpShapeSetSurfaceVelocity(_native, surfaceVelocity.x, surfaceVelocity.y);
   }
 
   /// Collision type of this shape.
   /// Used to identify different types of objects for collision callbacks.
   int get collisionType {
     if (_disposed) throw StateError('Shape has been disposed');
-    return bindings.cp_shape_get_collision_type(_native);
+    return cpShapeGetCollisionType(_native);
   }
 
   set collisionType(int collisionType) {
     if (_disposed) throw StateError('Shape has been disposed');
-    bindings.cp_shape_set_collision_type(_native, collisionType);
+    cpShapeSetCollisionType(_native, collisionType);
   }
 
   /// The body this shape is connected to.
   Body? get body {
     if (_disposed) throw StateError('Shape has been disposed');
-    final nativeBody = bindings.cp_shape_get_body(_native);
-    if (nativeBody.address == 0) return null;
+    final nativeBody = cpShapeGetBody(_native);
+    if (nativeBody == 0) return null;
     return Body.fromNative(nativeBody);
   }
 
-  set body(Body? body) {
-    if (_disposed) throw StateError('Shape has been disposed');
-    bindings.cp_shape_set_body(_native, body?.native ?? ffi.Pointer.fromAddress(0));
-  }
+  // Note: cpShapeSetBody is not commonly used - shapes are typically
+  // created with a body and not changed. Add if needed.
 
   /// Disposes of this shape and frees its resources.
   void dispose() {
     if (!_disposed) {
-      bindings.cp_shape_free(_native);
+      cpShapeFree(_native);
       _disposed = true;
     }
   }
@@ -249,29 +244,25 @@ abstract class Shape {
 class CircleShape extends Shape {
   /// Creates a circle shape attached to a body.
   factory CircleShape(Body body, double radius, {Vector offset = Vector.zero}) {
-    final native = bindings.cp_circle_shape_new(
-      body.native,
-      radius,
-      offset.toNative(),
-    );
-    if (native.address == 0) {
+    final native = cpCircleShapeNew(body.native, radius, offset.x, offset.y);
+    if (native == 0) {
       throw Exception('Failed to create circle shape');
     }
     return CircleShape._(native);
   }
 
-  CircleShape._(ffi.Pointer<bindings.cpShape> native) : super._(native);
+  CircleShape._(super._native) : super._();
 
   /// Get the offset of the circle shape from the body's center of gravity.
   Vector get offset {
     if (_disposed) throw StateError('CircleShape has been disposed');
-    return Vector.fromNative(bindings.cp_circle_shape_get_offset(_native));
+    return cpCircleShapeGetOffset(_native);
   }
 
   /// Get the radius of the circle shape.
   double get radius {
     if (_disposed) throw StateError('CircleShape has been disposed');
-    return bindings.cp_circle_shape_get_radius(_native);
+    return cpCircleShapeGetRadius(_native);
   }
 }
 
@@ -280,63 +271,58 @@ class BoxShape extends Shape {
   /// Creates a box shape attached to a body.
   /// [radius] is the corner radius for rounded corners (0.0 for sharp corners).
   factory BoxShape(Body body, double width, double height, {double radius = 0.0}) {
-    final native = bindings.cp_box_shape_new(body.native, width, height, radius);
-    if (native.address == 0) {
+    final native = cpPolyShapeNewBox(body.native, width, height, radius);
+    if (native == 0) {
       throw Exception('Failed to create box shape');
     }
     return BoxShape._(native);
   }
 
-  BoxShape._(ffi.Pointer<bindings.cpShape> native) : super._(native);
+  BoxShape._(super._native) : super._();
 }
 
 /// A line segment shape.
 class SegmentShape extends Shape {
   /// Creates a segment shape attached to a body.
   factory SegmentShape(Body body, Vector a, Vector b, double radius) {
-    final native = bindings.cp_segment_shape_new(
-      body.native,
-      a.toNative(),
-      b.toNative(),
-      radius,
-    );
-    if (native.address == 0) {
+    final native = cpSegmentShapeNew(body.native, a.x, a.y, b.x, b.y, radius);
+    if (native == 0) {
       throw Exception('Failed to create segment shape');
     }
     return SegmentShape._(native);
   }
 
-  SegmentShape._(ffi.Pointer<bindings.cpShape> native) : super._(native);
+  SegmentShape._(super._native) : super._();
 
   /// Get the first endpoint of the segment shape.
   Vector get endpointA {
     if (_disposed) throw StateError('SegmentShape has been disposed');
-    return Vector.fromNative(bindings.cp_segment_shape_get_a(_native));
+    return cpSegmentShapeGetA(_native);
   }
 
   /// Get the second endpoint of the segment shape.
   Vector get endpointB {
     if (_disposed) throw StateError('SegmentShape has been disposed');
-    return Vector.fromNative(bindings.cp_segment_shape_get_b(_native));
+    return cpSegmentShapeGetB(_native);
   }
 
   /// Get the normal of the segment shape.
   Vector get normal {
     if (_disposed) throw StateError('SegmentShape has been disposed');
-    return Vector.fromNative(bindings.cp_segment_shape_get_normal(_native));
+    return cpSegmentShapeGetNormal(_native);
   }
 
   /// Get the radius of the segment shape.
   double get radius {
     if (_disposed) throw StateError('SegmentShape has been disposed');
-    return bindings.cp_segment_shape_get_radius(_native);
+    return cpSegmentShapeGetRadius(_native);
   }
 
   /// Let Chipmunk know about the geometry of adjacent segments to avoid colliding with endcaps.
   /// This enables smoothed line collisions.
   void setNeighbors(Vector prev, Vector next) {
     if (_disposed) throw StateError('SegmentShape has been disposed');
-    bindings.cp_segment_shape_set_neighbors(_native, prev.toNative(), next.toNative());
+    cpSegmentShapeSetNeighbors(_native, prev.x, prev.y, next.x, next.y);
   }
 }
 
@@ -344,51 +330,34 @@ class SegmentShape extends Shape {
 class PolyShape extends Shape {
   /// Creates a polygon shape attached to a body.
   /// A convex hull will be created from the vertices.
-  /// [transform] is an optional transform to apply to the vertices.
-  /// If null, vertices are used as-is in body local coordinates.
   factory PolyShape(
     Body body,
     List<Vector> vertices, {
     double radius = 0.0,
-    bindings.cpTransform? transform,
   }) {
     if (vertices.isEmpty) {
       throw ArgumentError('Vertices list cannot be empty');
     }
-    final verts = malloc<bindings.cpVect>(vertices.length);
-    for (var i = 0; i < vertices.length; i++) {
-      verts[i] = vertices[i].toNative();
+    // Flatten vertices to a list of doubles [x1, y1, x2, y2, ...]
+    final flatVerts = <double>[];
+    for (final v in vertices) {
+      flatVerts
+        ..add(v.x)
+        ..add(v.y);
     }
-    ffi.Pointer<bindings.cpShape> native;
-    if (transform != null) {
-      native = bindings.cp_poly_shape_new(
-        body.native,
-        vertices.length,
-        verts,
-        transform,
-        radius,
-      );
-    } else {
-      native = bindings.cp_poly_shape_new_raw(
-        body.native,
-        vertices.length,
-        verts,
-        radius,
-      );
-    }
-    malloc.free(verts);
-    if (native.address == 0) {
+    final native = cpPolyShapeNew(body.native, flatVerts, radius);
+    if (native == 0) {
       throw Exception('Failed to create poly shape');
     }
     return PolyShape._(native);
   }
 
-  PolyShape._(ffi.Pointer<bindings.cpShape> native) : super._(native);
+  PolyShape._(super._native) : super._();
 
   /// Get the number of vertices in the polygon shape.
   int get vertexCount {
     if (_disposed) throw StateError('PolyShape has been disposed');
-    return bindings.cp_poly_shape_get_count(_native);
+    return cpPolyShapeGetCount(_native);
   }
 
   /// Get the vertex at the given index.
@@ -399,12 +368,12 @@ class PolyShape extends Shape {
     if (index < 0 || index >= vertexCount) {
       throw RangeError('Index $index out of range [0, ${vertexCount - 1}]');
     }
-    return Vector.fromNative(bindings.cp_poly_shape_get_vert(_native, index));
+    return cpPolyShapeGetVert(_native, index);
   }
 
   /// Get the radius of the polygon shape (for rounded corners).
   double get radius {
     if (_disposed) throw StateError('PolyShape has been disposed');
-    return bindings.cp_poly_shape_get_radius(_native);
+    return cpPolyShapeGetRadius(_native);
   }
 }

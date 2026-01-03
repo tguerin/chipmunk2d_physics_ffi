@@ -33,6 +33,19 @@
   <link rel="manifest" href="manifest.json">
 </head>
 <body>
+  <script>
+    window._dynamicImport = async function(modulePath) {
+      console.log('modulePath', modulePath);
+      try {
+        // Adding a cache-buster can help during development
+        // const versionedPath = modulePath + '?v=' + new Date().getTime();
+        return await import(modulePath);
+      } catch (e) {
+        console.error("FFI Loader: Dynamic import failed for path: " + modulePath, e);
+        throw e;
+      }
+    };
+  </script>
   <script src="flutter_bootstrap.js" async></script>
 </body>
 </html>

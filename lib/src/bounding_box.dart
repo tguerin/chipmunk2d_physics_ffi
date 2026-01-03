@@ -1,9 +1,8 @@
-import 'dart:ffi' as ffi;
-
-import 'package:chipmunk2d_physics_ffi/chipmunk2d_physics_ffi_bindings_generated.dart' as bindings;
 import 'package:chipmunk2d_physics_ffi/src/vector.dart';
 
 /// Chipmunk's axis-aligned 2D bounding box type (left, bottom, right, top).
+///
+/// This is a pure Dart class with no platform dependencies.
 class BoundingBox {
   /// Left edge of the bounding box.
   final double left;
@@ -28,24 +27,17 @@ class BoundingBox {
     required this.top,
   });
 
-  /// Creates a bounding box from Chipmunk's cpBB structure.
-  factory BoundingBox.fromNative(bindings.cpBB native) {
+  /// Creates a bounding box from a record with named fields.
+  ///
+  /// This factory is useful when working with record types that have left, bottom, right, and top fields.
+  /// Most users should use the [BoundingBox] constructor directly.
+  factory BoundingBox.fromBB(({double left, double bottom, double right, double top}) bb) {
     return BoundingBox(
-      left: native.l,
-      bottom: native.b,
-      right: native.r,
-      top: native.t,
+      left: bb.left,
+      bottom: bb.bottom,
+      right: bb.right,
+      top: bb.top,
     );
-  }
-
-  /// Converts this bounding box to Chipmunk's cpBB structure.
-  bindings.cpBB toNative() {
-    final bb = ffi.Struct.create<bindings.cpBB>()
-      ..l = left
-      ..b = bottom
-      ..r = right
-      ..t = top;
-    return bb;
   }
 
   /// Creates a bounding box centered on a point with the given extents (half sizes).

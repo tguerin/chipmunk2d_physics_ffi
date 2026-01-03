@@ -25,9 +25,9 @@ void main() {
           Vector.zero,
         );
         expect(joint, isNotNull);
-        // Compare native pointers since Body.fromNative creates new instances
-        expect(joint.bodyA.native.address, bodyA.native.address);
-        expect(joint.bodyB.native.address, bodyB.native.address);
+        // Compare native pointers (now ints) since Body.fromNative creates new instances
+        expect(joint.bodyA.native, bodyA.native);
+        expect(joint.bodyB.native, bodyB.native);
         joint.dispose();
       });
 
