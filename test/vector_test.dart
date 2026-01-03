@@ -116,12 +116,11 @@ void main() {
       expect(v.toString(), 'Vector(1.5, 2.5)');
     });
 
-    test('fromNative and toNative roundtrip', () {
-      const original = Vector(10.0, 20.0);
-      final native = original.toNative();
-      final restored = Vector.fromNative(native);
-      expect(restored.x, closeTo(10.0, 0.001));
-      expect(restored.y, closeTo(20.0, 0.001));
+    test('fromVect2 creates vector', () {
+      const vect = (x: 10.0, y: 20.0);
+      final vector = Vector.fromVect2(vect);
+      expect(vector.x, closeTo(10.0, 0.001));
+      expect(vector.y, closeTo(20.0, 0.001));
     });
   });
 }

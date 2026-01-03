@@ -17,8 +17,15 @@ file(GLOB CHIPMUNK_SOURCES CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/../chi
 list(FILTER CHIPMUNK_SOURCES EXCLUDE REGEX "cpHastySpace\\.c$")
 
 # 5. Define the library/executable
+# For WASM (pure, no Emscripten), we use add_library to generate a .wasm file
 # For Emscripten, we use add_executable to generate the JS+WASM pair.
-if(EMSCRIPTEN)
+if(WASM32 AND NOT EMSCRIPTEN)
+    # Pure WASM build (no JS wrapper)
+    add_library(${PROJECT_NAME} STATIC
+        chipmunk2d_physics_ffi.c
+        ${CHIPMUNK_SOURCES}
+    )
+elseif(EMSCRIPTEN)
     add_executable(${PROJECT_NAME}
         chipmunk2d_physics_ffi.c
         ${CHIPMUNK_SOURCES}
@@ -62,6 +69,8 @@ elseif(WIN32)
     set_target_properties(${PROJECT_NAME} PROPERTIES SUFFIX ".dll")
 elseif(EMSCRIPTEN)
     set_target_properties(${PROJECT_NAME} PROPERTIES SUFFIX ".js")
+elseif(WASM32 AND NOT EMSCRIPTEN)
+    set_target_properties(${PROJECT_NAME} PROPERTIES SUFFIX ".wasm")
 else()
     set_target_properties(${PROJECT_NAME} PROPERTIES SUFFIX ".so")
 endif()
@@ -77,5 +86,26 @@ if(EMSCRIPTEN)
         "SHELL:-s WASM=1"
         "SHELL:-s EXPORTED_FUNCTIONS=['_malloc','_free']"
         "SHELL:-s EXPORT_ALL=1"
+    )
+elseif(WASM32 AND NOT EMSCRIPTEN)
+    # Pure WASM build settings (using clang/wasi-sdk)
+    # Export all functions that start with _cp_ or _malloc/_free
+    target_compile_options(${PROJECT_NAME} PRIVATE
+        -fvisibility=hidden
+        -fno-exceptions
+        -nostdlib
+    )
+    target_link_options(${PROJECT_NAME} PRIVATE
+        -Wl,--export-all
+        -Wl,--no-entry
+        -Wl,--allow-undefined
+        -Wl,--import-memory
+        -Wl,--shared-memory
+        -Wl,--max-memory=2147483648
+    )
+    # Export malloc and free explicitly
+    target_link_options(${PROJECT_NAME} PRIVATE
+        -Wl,--export=malloc
+        -Wl,--export=free
     )
 endif()

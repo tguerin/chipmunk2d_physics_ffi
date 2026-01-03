@@ -3,7 +3,122 @@ import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:chipmunk2d_physics_ffi/chipmunk2d_physics_ffi.dart';
 
-void main() => runApp(const MaterialApp(home: PhysicsDemo()));
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  Object? initError;
+  StackTrace? initStackTrace;
+
+  print('before initializeChipmunk');
+  try {
+    await initializeChipmunk();
+    print('initializeChipmunk completed successfully');
+    print('isChipmunkInitialized: $isChipmunkInitialized');
+
+    if (!isChipmunkInitialized) {
+      initError = StateError('initializeChipmunk() completed but isChipmunkInitialized is false');
+    }
+  } catch (e, stackTrace) {
+    initError = e;
+    initStackTrace = stackTrace;
+    print('error initializing Chipmunk2D: $e');
+    print('stack trace: $stackTrace');
+  }
+  print('after initializeChipmunk');
+
+  runApp(
+    MaterialApp(
+      home: initError != null ? ErrorScreen(error: initError, stackTrace: initStackTrace) : const PhysicsDemo(),
+    ),
+  );
+}
+
+/// Error screen displayed when Chipmunk2D initialization fails.
+class ErrorScreen extends StatelessWidget {
+  final Object error;
+  final StackTrace? stackTrace;
+
+  const ErrorScreen({super.key, required this.error, this.stackTrace});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.red.shade50,
+      appBar: AppBar(
+        title: const Text('Initialization Error'),
+        backgroundColor: Colors.red,
+        foregroundColor: Colors.white,
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Failed to initialize Chipmunk2D',
+              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.red),
+            ),
+            const SizedBox(height: 16),
+            const Text('Error:', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 8),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                border: Border.all(color: Colors.red),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: SelectableText(error.toString(), style: const TextStyle(fontFamily: 'monospace')),
+            ),
+            if (stackTrace != null) ...[
+              const SizedBox(height: 16),
+              const Text('Stack Trace:', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 8),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  border: Border.all(color: Colors.red),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: SelectableText(
+                  stackTrace.toString(),
+                  style: const TextStyle(fontFamily: 'monospace', fontSize: 12),
+                ),
+              ),
+            ],
+            const SizedBox(height: 16),
+            const Text('Additional Info:', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 8),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.blue.shade50,
+                border: Border.all(color: Colors.blue),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('isChipmunkInitialized: $isChipmunkInitialized'),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Make sure you are running on a supported platform:\n'
+                    '- Web: Requires WASM files in assets\n'
+                    '- Native: iOS, Android, macOS, Linux, Windows',
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
 
 /// A demo showcasing Chipmunk2D physics with bouncing particles.
 class PhysicsDemo extends StatefulWidget {
@@ -21,8 +136,7 @@ class Particle {
   Particle(this.body, this.shape, this.radius);
 }
 
-class _PhysicsDemoState extends State<PhysicsDemo>
-    with SingleTickerProviderStateMixin {
+class _PhysicsDemoState extends State<PhysicsDemo> with SingleTickerProviderStateMixin {
   Space? _space;
   final List<Particle> _particles = [];
   Ticker? _ticker;
@@ -48,6 +162,13 @@ class _PhysicsDemoState extends State<PhysicsDemo>
   }
 
   void _initPhysics(Size screenSize) {
+    if (!isChipmunkInitialized) {
+      throw StateError(
+        'Chipmunk2D is not initialized. '
+        'Make sure await initializeChipmunk() completed successfully in main().',
+      );
+    }
+
     _halfH = screenSize.height / 2;
     _halfW = screenSize.width / 2;
 
@@ -68,34 +189,19 @@ class _PhysicsDemoState extends State<PhysicsDemo>
     _ceilingY = _halfH - 10;
 
     // Floor
-    final floorShape = SegmentShape(
-      staticBody,
-      Vector(-_halfW, _floorY),
-      Vector(_halfW, _floorY),
-      1.0,
-    );
+    final floorShape = SegmentShape(staticBody, Vector(-_halfW, _floorY), Vector(_halfW, _floorY), 1.0);
     floorShape.elasticity = 0.8;
     floorShape.friction = 0.1;
     space.addShape(floorShape);
 
     // Left wall
-    final leftWallShape = SegmentShape(
-      staticBody,
-      Vector(-_halfW, _floorY),
-      Vector(-_halfW, _ceilingY),
-      1.0,
-    );
+    final leftWallShape = SegmentShape(staticBody, Vector(-_halfW, _floorY), Vector(-_halfW, _ceilingY), 1.0);
     leftWallShape.elasticity = 0.8;
     leftWallShape.friction = 0.1;
     space.addShape(leftWallShape);
 
     // Right wall
-    final rightWallShape = SegmentShape(
-      staticBody,
-      Vector(_halfW, _floorY),
-      Vector(_halfW, _ceilingY),
-      1.0,
-    );
+    final rightWallShape = SegmentShape(staticBody, Vector(_halfW, _floorY), Vector(_halfW, _ceilingY), 1.0);
     rightWallShape.elasticity = 0.8;
     rightWallShape.friction = 0.1;
     space.addShape(rightWallShape);
@@ -155,9 +261,7 @@ class _PhysicsDemoState extends State<PhysicsDemo>
   void _onTick(Duration elapsed) {
     if (!mounted) return;
     if (_space case final space?) {
-      final rawDt = _lastTime == Duration.zero
-          ? 1 / 60
-          : (elapsed - _lastTime).inMicroseconds / 1000000;
+      final rawDt = _lastTime == Duration.zero ? 1 / 60 : (elapsed - _lastTime).inMicroseconds / 1000000;
       final dt = math.min(math.max(rawDt, 0.0), 1 / 30);
       _lastTime = elapsed;
 
@@ -216,10 +320,7 @@ class _PhysicsDemoState extends State<PhysicsDemo>
           ValueListenableBuilder<int>(
             valueListenable: _frameCounter,
             builder: (context, frame, child) {
-              return CustomPaint(
-                size: size,
-                painter: ParticlePainter(_particles, size),
-              );
+              return CustomPaint(size: size, painter: ParticlePainter(_particles, size));
             },
           ),
           // Controls overlay
@@ -236,10 +337,7 @@ class _PhysicsDemoState extends State<PhysicsDemo>
                   children: [
                     Text(
                       'Particles: ${_particles.length}',
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
+                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                     ),
                     const SizedBox(height: 8),
                     Slider(
@@ -302,21 +400,9 @@ class ParticlePainter extends CustomPainter {
       ..color = Colors.white
       ..strokeWidth = 3;
 
-    canvas.drawLine(
-      Offset(-halfW, floorY),
-      Offset(halfW, floorY),
-      boundaryPaint,
-    );
-    canvas.drawLine(
-      Offset(-halfW, floorY),
-      Offset(-halfW, ceilingY),
-      boundaryPaint,
-    );
-    canvas.drawLine(
-      Offset(halfW, floorY),
-      Offset(halfW, ceilingY),
-      boundaryPaint,
-    );
+    canvas.drawLine(Offset(-halfW, floorY), Offset(halfW, floorY), boundaryPaint);
+    canvas.drawLine(Offset(-halfW, floorY), Offset(-halfW, ceilingY), boundaryPaint);
+    canvas.drawLine(Offset(halfW, floorY), Offset(halfW, ceilingY), boundaryPaint);
 
     // Draw particles
     final particlePaint = Paint()..color = Colors.blue;

@@ -7,7 +7,8 @@ API for 2D physics simulation in Flutter and Dart applications.
 ## Features
 
 - **Complete API Coverage**: 1-1 API compliance with Chipmunk2D 7.0.3
-- **Idiomatic Dart API**: Clean, object-oriented wrapper around Chipmunk's C API with type-safe enums and helper methods
+- **Idiomatic Dart API**: Clean, object-oriented wrapper around Chipmunk's C API
+  with type-safe enums and helper methods
 - **Full Feature Set**:
   - Dynamic, kinematic, and static bodies
   - Circle, box, segment, and polygon shapes
@@ -41,7 +42,11 @@ flutter pub get
 ```dart
 import 'package:chipmunk2d_physics_ffi/chipmunk2d_physics_ffi.dart';
 
-void main() {
+void main() async {
+  // On web, initialize Chipmunk2D before use (no-op on native platforms)
+  WidgetsFlutterBinding.ensureInitialized();
+  await initializeChipmunk();
+  
   // Create a physics space
   final space = Space();
   space.gravity = Vector(0, -100); // Gravity pointing down
@@ -369,7 +374,26 @@ This package supports:
 - ✅ macOS
 - ✅ Linux
 - ✅ Windows
-- ✅ Web (with limitations)
+- ✅ Web
+
+### Web Support
+
+On web, you **must** call `initializeChipmunk()` before using any Chipmunk2D
+functions:
+
+```dart
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  
+  // Required on web, no-op on native platforms
+  await initializeChipmunk();
+  
+  runApp(MyApp());
+}
+```
+
+The WASM module is automatically included in your Flutter web build - no
+additional setup required!
 
 ## Chipmunk2D Version
 

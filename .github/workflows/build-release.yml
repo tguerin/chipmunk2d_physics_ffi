@@ -202,6 +202,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: mymindstorm/setup-emsdk@v14
+        with:
+          version: '3.1.51'
       - name: Download Chipmunk2D
         run: |
           # Use fork only for patched versions, otherwise use original repo
@@ -215,16 +217,55 @@ jobs:
           fi
           curl -L "https://github.com/$REPO/archive/refs/tags/$TAG.tar.gz" -o chipmunk2d.tar.gz
           tar -xzf chipmunk2d.tar.gz && mv Chipmunk2D-* chipmunk2d
-      - name: Build
+      - name: Build with Emscripten
         run: |
+          # Build the FFI wrapper library using Emscripten
+          # Emscripten will generate both .js and .wasm files
           emcmake cmake -B build -S src -DCMAKE_BUILD_TYPE=Release
-          emmake cmake --build build --config Release
+          cmake --build build --config Release
+          
+          # Debug: Show all files in build directory
+          echo "=== Build directory contents ==="
+          find build -type f -exec ls -la {} \;
+          
+          # Verify outputs exist
+          if [ ! -f "build/chipmunk2d_physics_ffi.js" ]; then
+            echo "Error: chipmunk2d_physics_ffi.js not found"
+            exit 1
+          fi
+          if [ ! -f "build/chipmunk2d_physics_ffi.wasm" ]; then
+            echo "Error: chipmunk2d_physics_ffi.wasm not found"
+            exit 1
+          fi
+          
+          # Verify WASM file is not truncated (should be at least 100KB)
+          WASM_SIZE=$(stat -c%s "build/chipmunk2d_physics_ffi.wasm" 2>/dev/null || stat -f%z "build/chipmunk2d_physics_ffi.wasm")
+          echo "WASM file size: $WASM_SIZE bytes"
+          if [ "$WASM_SIZE" -lt 100000 ]; then
+            echo "Error: WASM file seems truncated (only $WASM_SIZE bytes)"
+            exit 1
+          fi
+          
+          # Verify WASM magic bytes
+          MAGIC=$(xxd -l 4 build/chipmunk2d_physics_ffi.wasm | head -1)
+          echo "WASM magic bytes: $MAGIC"
+          
+          echo "Build successful - found both .js and .wasm files"
       - name: Package
         run: |
-          # Grab both generated files
-          cp build/*.js .
-          cp build/*.wasm .
-          tar -czf chipmunk2d_physics_ffi-web.tar.gz *.js *.wasm
+          echo "=== Files in build directory ==="
+          ls -la build/chipmunk2d_physics_ffi.*
+          
+          cp build/chipmunk2d_physics_ffi.js .
+          cp build/chipmunk2d_physics_ffi.wasm .
+          
+          echo "=== Files after copy ==="
+          ls -la chipmunk2d_physics_ffi.*
+          
+          tar -czf chipmunk2d_physics_ffi-web.tar.gz chipmunk2d_physics_ffi.js chipmunk2d_physics_ffi.wasm
+          
+          echo "=== Archive contents ==="
+          tar -tzvf chipmunk2d_physics_ffi-web.tar.gz
       - name: Upload
         uses: actions/upload-artifact@v4
         with:

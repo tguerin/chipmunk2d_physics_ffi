@@ -315,10 +315,9 @@ void main() {
       expect(filter.mask, 0);
     });
 
-    test('toNative and fromNative roundtrip', () {
+    test('fromNative creates filter with all values', () {
       const original = ShapeFilter(group: 1, categories: 2, mask: 3);
-      final native = original.toNative();
-      final restored = ShapeFilter.fromNative(native);
+      final restored = ShapeFilter.fromNative(original.group, original.categories, original.mask);
       expect(restored.group, 1);
       expect(restored.categories, 2);
       expect(restored.mask, 3);

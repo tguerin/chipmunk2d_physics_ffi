@@ -1,110 +1,95 @@
-import 'dart:ffi' as ffi;
-
-import 'package:chipmunk2d_physics_ffi/chipmunk2d_physics_ffi_bindings_generated.dart' as bindings;
 import 'package:chipmunk2d_physics_ffi/src/bounding_box.dart';
+import 'package:chipmunk2d_physics_ffi/src/platform/chipmunk_bindings.dart';
 import 'package:chipmunk2d_physics_ffi/src/vector.dart';
-import 'package:ffi/ffi.dart';
 
 /// Utility functions for calculating moments of inertia and areas for shapes.
 
 /// Calculate the moment of inertia for a circle.
 /// [r1] and [r2] are the inner and outer diameters. A solid circle has an inner diameter of 0.
 double momentForCircle(double mass, double r1, double r2, Vector offset) {
-  return bindings.cp_moment_for_circle(mass, r1, r2, offset.toNative());
+  return cpMomentForCircle(mass, r1, r2, offset.x, offset.y);
 }
 
 /// Calculate area of a hollow circle.
 /// [r1] and [r2] are the inner and outer diameters. A solid circle has an inner diameter of 0.
 double areaForCircle(double r1, double r2) {
-  return bindings.cp_area_for_circle(r1, r2);
+  return cpAreaForCircle(r1, r2);
 }
 
 /// Calculate the moment of inertia for a line segment.
-/// Beveling radius is not supported.
 double momentForSegment(double mass, Vector a, Vector b, double radius) {
-  return bindings.cp_moment_for_segment(mass, a.toNative(), b.toNative(), radius);
+  return cpMomentForSegment(mass, a.x, a.y, b.x, b.y, radius);
 }
 
 /// Calculate the area of a fattened (capsule shaped) line segment.
 double areaForSegment(Vector a, Vector b, double radius) {
-  return bindings.cp_area_for_segment(a.toNative(), b.toNative(), radius);
+  return cpAreaForSegment(a.x, a.y, b.x, b.y, radius);
 }
 
-/// Calculate the moment of inertia for a solid polygon shape assuming its center of gravity is at its centroid.
-/// The [offset] is added to each vertex.
+/// Calculate the moment of inertia for a solid polygon shape.
 double momentForPoly(double mass, List<Vector> vertices, Vector offset, double radius) {
   if (vertices.isEmpty) {
     throw ArgumentError('Vertices list cannot be empty');
   }
-  final verts = malloc<bindings.cpVect>(vertices.length);
-  for (var i = 0; i < vertices.length; i++) {
-    verts[i] = vertices[i].toNative();
+  final flatVerts = <double>[];
+  for (final v in vertices) {
+    flatVerts
+      ..add(v.x)
+      ..add(v.y);
   }
-  final result = bindings.cp_moment_for_poly(mass, vertices.length, verts, offset.toNative(), radius);
-  malloc.free(verts);
-  return result;
+  return cpMomentForPoly(mass, flatVerts, offset.x, offset.y, radius);
 }
 
-/// Calculate the signed area of a polygon. A clockwise winding gives positive area.
-/// This is probably backwards from what you expect, but matches Chipmunk's winding for poly shapes.
+/// Calculate the signed area of a polygon.
 double areaForPoly(List<Vector> vertices, double radius) {
   if (vertices.isEmpty) {
     throw ArgumentError('Vertices list cannot be empty');
   }
-  final verts = malloc<bindings.cpVect>(vertices.length);
-  for (var i = 0; i < vertices.length; i++) {
-    verts[i] = vertices[i].toNative();
+  final flatVerts = <double>[];
+  for (final v in vertices) {
+    flatVerts
+      ..add(v.x)
+      ..add(v.y);
   }
-  final result = bindings.cp_area_for_poly(vertices.length, verts, radius);
-  malloc.free(verts);
-  return result;
+  return cpAreaForPoly(flatVerts, radius);
 }
 
-/// Calculate the natural centroid of a polygon.
+/// Calculate the centroid of a polygon.
 Vector centroidForPoly(List<Vector> vertices) {
   if (vertices.isEmpty) {
     throw ArgumentError('Vertices list cannot be empty');
   }
-  final verts = malloc<bindings.cpVect>(vertices.length);
-  for (var i = 0; i < vertices.length; i++) {
-    verts[i] = vertices[i].toNative();
+  final flatVerts = <double>[];
+  for (final v in vertices) {
+    flatVerts
+      ..add(v.x)
+      ..add(v.y);
   }
-  final result = Vector.fromNative(bindings.cp_centroid_for_poly(vertices.length, verts));
-  malloc.free(verts);
-  return result;
+  return cpCentroidForPoly(flatVerts);
 }
 
 /// Calculate the moment of inertia for a solid box.
 double momentForBox(double mass, double width, double height) {
-  return bindings.cp_moment_for_box(mass, width, height);
+  return cpMomentForBox(mass, width, height);
 }
 
-/// Calculate the moment of inertia for a solid box.
+/// Calculate the moment of inertia for a box defined by a bounding box.
 double momentForBox2(double mass, BoundingBox box) {
-  return bindings.cp_moment_for_box2(mass, box.toNative());
+  return cpMomentForBox2(mass, box.left, box.bottom, box.right, box.top);
 }
 
-/// Calculate the convex hull of a given set of points.
-/// Returns the vertices of the convex hull.
-/// [tolerance] is the allowed amount to shrink the hull when simplifying it. A tolerance of 0.0 creates an exact hull.
+/// Calculate the convex hull of a set of points.
 List<Vector> convexHull(List<Vector> points, {double tolerance = 0.0}) {
-  if (points.isEmpty) {
-    return [];
+  final flatPoints = <double>[];
+  for (final p in points) {
+    flatPoints
+      ..add(p.x)
+      ..add(p.y);
   }
-  final inputVerts = malloc<bindings.cpVect>(points.length);
-  final outputVerts = malloc<bindings.cpVect>(points.length);
-  final firstPtr = malloc<ffi.Int>();
-  for (var i = 0; i < points.length; i++) {
-    inputVerts[i] = points[i].toNative();
+  final flatHull = cpConvexHull(flatPoints, tolerance: tolerance);
+  final hull = <Vector>[];
+  for (var i = 0; i < flatHull.length; i += 2) {
+    hull.add(Vector(flatHull[i], flatHull[i + 1]));
   }
-  final count = bindings.cp_convex_hull(points.length, inputVerts, outputVerts, firstPtr, tolerance);
-  final result = <Vector>[];
-  for (var i = 0; i < count; i++) {
-    result.add(Vector.fromNative(outputVerts[i]));
-  }
-  malloc
-    ..free(inputVerts)
-    ..free(outputVerts)
-    ..free(firstPtr);
-  return result;
+  return hull;
 }

@@ -1,9 +1,9 @@
-import 'dart:ffi' as ffi;
 import 'dart:math' as math;
 
-import 'package:chipmunk2d_physics_ffi/chipmunk2d_physics_ffi_bindings_generated.dart' as bindings;
-
 /// A 2D vector representing a point or direction in space.
+///
+/// This is a pure Dart class with no platform dependencies.
+/// It's used to represent positions, velocities, forces, etc.
 class Vector {
   /// The x component of the vector.
   final double x;
@@ -14,21 +14,12 @@ class Vector {
   /// Creates a vector with the given x and y components.
   const Vector(this.x, this.y);
 
-  /// Creates a vector from Chipmunk2D's cpVect structure.
-  @pragma('vm:prefer-inline')
-  factory Vector.fromNative(bindings.cpVect native) {
-    // Access struct fields directly - no FFI call needed
-    return Vector(native.x, native.y);
-  }
-
-  /// Converts this vector to Chipmunk2D's cpVect structure.
-  @pragma('vm:prefer-inline')
-  bindings.cpVect toNative() {
-    // Create struct directly in Dart - no FFI call needed
-    final vect = ffi.Struct.create<bindings.cpVect>()
-      ..x = x
-      ..y = y;
-    return vect;
+  /// Creates a vector from a record with named fields.
+  ///
+  /// This factory is useful when working with record types that have x and y fields.
+  /// Most users should use the [Vector] constructor directly.
+  factory Vector.fromVect2(({double x, double y}) vect) {
+    return Vector(vect.x, vect.y);
   }
 
   /// Zero vector (0, 0).

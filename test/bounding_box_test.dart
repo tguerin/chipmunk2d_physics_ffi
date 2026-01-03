@@ -29,14 +29,13 @@ void main() {
       expect(bb.top, closeTo(10.0, 0.001));
     });
 
-    test('fromNative and toNative roundtrip', () {
-      const original = BoundingBox(left: -10, bottom: -10, right: 10, top: 10);
-      final native = original.toNative();
-      final restored = BoundingBox.fromNative(native);
-      expect(restored.left, closeTo(-10.0, 0.001));
-      expect(restored.bottom, closeTo(-10.0, 0.001));
-      expect(restored.right, closeTo(10.0, 0.001));
-      expect(restored.top, closeTo(10.0, 0.001));
+    test('fromBB creates bounding box', () {
+      const bbData = (left: -10.0, bottom: -10.0, right: 10.0, top: 10.0);
+      final bb = BoundingBox.fromBB(bbData);
+      expect(bb.left, closeTo(-10.0, 0.001));
+      expect(bb.bottom, closeTo(-10.0, 0.001));
+      expect(bb.right, closeTo(10.0, 0.001));
+      expect(bb.top, closeTo(10.0, 0.001));
     });
 
     test('intersects', () {

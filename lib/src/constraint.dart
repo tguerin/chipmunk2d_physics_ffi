@@ -1,17 +1,18 @@
-import 'dart:ffi' as ffi;
-
-import 'package:chipmunk2d_physics_ffi/chipmunk2d_physics_ffi_bindings_generated.dart' as bindings;
 import 'package:chipmunk2d_physics_ffi/src/body.dart';
+import 'package:chipmunk2d_physics_ffi/src/platform/chipmunk_bindings.dart';
 import 'package:chipmunk2d_physics_ffi/src/vector.dart';
 
 /// Base class for physics constraints (joints).
 /// Constraints connect two bodies together and enforce relationships between them.
 abstract class Constraint {
-  final ffi.Pointer<bindings.cpConstraint> _native;
+  final int _native;
   bool _disposed = false;
 
+  /// Creates a Constraint from a native pointer (for internal use).
+  Constraint.fromNative(this._native);
+
   /// Gets the native pointer (for internal use).
-  ffi.Pointer<bindings.cpConstraint> get native {
+  int get native {
     if (_disposed) throw StateError('Constraint has been disposed');
     return _native;
   }
@@ -20,76 +21,69 @@ abstract class Constraint {
   /// Defaults to INFINITY.
   double get maxForce {
     if (_disposed) throw StateError('Constraint has been disposed');
-    return bindings.cp_constraint_get_max_force(_native);
+    return cpConstraintGetMaxForce(_native);
   }
 
   set maxForce(double maxForce) {
     if (_disposed) throw StateError('Constraint has been disposed');
-    bindings.cp_constraint_set_max_force(_native, maxForce);
+    cpConstraintSetMaxForce(_native, maxForce);
   }
 
   /// Rate at which joint error is corrected.
-  /// Defaults to pow(1.0 - 0.1, 60.0) meaning that it will
-  /// correct 10% of the error every 1/60th of a second.
   double get errorBias {
     if (_disposed) throw StateError('Constraint has been disposed');
-    return bindings.cp_constraint_get_error_bias(_native);
+    return cpConstraintGetErrorBias(_native);
   }
 
   set errorBias(double errorBias) {
     if (_disposed) throw StateError('Constraint has been disposed');
-    bindings.cp_constraint_set_error_bias(_native, errorBias);
+    cpConstraintSetErrorBias(_native, errorBias);
   }
 
   /// Maximum rate at which joint error is corrected.
-  /// Defaults to INFINITY.
   double get maxBias {
     if (_disposed) throw StateError('Constraint has been disposed');
-    return bindings.cp_constraint_get_max_bias(_native);
+    return cpConstraintGetMaxBias(_native);
   }
 
   set maxBias(double maxBias) {
     if (_disposed) throw StateError('Constraint has been disposed');
-    bindings.cp_constraint_set_max_bias(_native, maxBias);
+    cpConstraintSetMaxBias(_native, maxBias);
   }
 
   /// Whether the two bodies connected by the constraint are allowed to collide.
-  /// Defaults to false.
   bool get collideBodies {
     if (_disposed) throw StateError('Constraint has been disposed');
-    return bindings.cp_constraint_get_collide_bodies(_native) != 0;
+    return cpConstraintGetCollideBodies(_native) != 0;
   }
 
   set collideBodies(bool collideBodies) {
     if (_disposed) throw StateError('Constraint has been disposed');
-    bindings.cp_constraint_set_collide_bodies(_native, collideBodies ? 1 : 0);
+    cpConstraintSetCollideBodies(_native, collideBodies ? 1 : 0);
   }
 
   /// The last impulse applied by this constraint.
-  /// This function should only be called from a post-solve, post-step or cpBodyEachArbiter callback.
   double get impulse {
     if (_disposed) throw StateError('Constraint has been disposed');
-    return bindings.cp_constraint_get_impulse(_native);
+    return cpConstraintGetImpulse(_native);
   }
 
   /// The first body the constraint is attached to.
   Body get bodyA {
     if (_disposed) throw StateError('Constraint has been disposed');
-    final nativeBody = bindings.cp_constraint_get_body_a(_native);
-    return Body.fromNative(nativeBody);
+    return Body.fromNative(cpConstraintGetBodyA(_native));
   }
 
   /// The second body the constraint is attached to.
   Body get bodyB {
     if (_disposed) throw StateError('Constraint has been disposed');
-    final nativeBody = bindings.cp_constraint_get_body_b(_native);
-    return Body.fromNative(nativeBody);
+    return Body.fromNative(cpConstraintGetBodyB(_native));
   }
 
   /// Disposes of this constraint and frees its resources.
   void dispose() {
     if (!_disposed) {
-      bindings.cp_constraint_free(_native);
+      cpConstraintFree(_native);
       _disposed = true;
     }
   }
@@ -97,234 +91,252 @@ abstract class Constraint {
   Constraint._(this._native);
 }
 
-/// A pin joint keeps two anchor points on two bodies at a fixed distance from each other.
+/// A pin joint keeps two anchor points on two bodies at a fixed distance.
 class PinJoint extends Constraint {
-  /// Creates a pin joint connecting two bodies at specific anchor points.
+  /// Creates a pin joint connecting two bodies at specified anchor points.
+  ///
+  /// @param a The first body.
+  /// @param b The second body.
+  /// @param anchorA The anchor point on body A in local coordinates.
+  /// @param anchorB The anchor point on body B in local coordinates.
   factory PinJoint(Body a, Body b, Vector anchorA, Vector anchorB) {
-    final native = bindings.cp_pin_joint_new(
-      a.native,
-      b.native,
-      anchorA.toNative(),
-      anchorB.toNative(),
-    );
-    if (native.address == 0) {
-      throw Exception('Failed to create pin joint');
-    }
+    final native = cpPinJointNew(a.native, b.native, anchorA.x, anchorA.y, anchorB.x, anchorB.y);
+    if (native == 0) throw Exception('Failed to create pin joint');
     return PinJoint._(native);
   }
 
-  PinJoint._(ffi.Pointer<bindings.cpConstraint> native) : super._(native);
+  PinJoint._(super._native) : super._();
 
-  /// Location of the first anchor relative to the first body.
+  /// The anchor point on body A in local coordinates.
   Vector get anchorA {
     if (_disposed) throw StateError('PinJoint has been disposed');
-    return Vector.fromNative(bindings.cp_pin_joint_get_anchor_a(_native));
+    return cpPinJointGetAnchorA(_native);
   }
 
-  set anchorA(Vector anchorA) {
+  /// Sets the anchor point on body A in local coordinates.
+  set anchorA(Vector v) {
     if (_disposed) throw StateError('PinJoint has been disposed');
-    bindings.cp_pin_joint_set_anchor_a(_native, anchorA.toNative());
+    cpPinJointSetAnchorA(_native, v.x, v.y);
   }
 
-  /// Location of the second anchor relative to the second body.
+  /// The anchor point on body B in local coordinates.
   Vector get anchorB {
     if (_disposed) throw StateError('PinJoint has been disposed');
-    return Vector.fromNative(bindings.cp_pin_joint_get_anchor_b(_native));
+    return cpPinJointGetAnchorB(_native);
   }
 
-  set anchorB(Vector anchorB) {
+  /// Sets the anchor point on body B in local coordinates.
+  set anchorB(Vector v) {
     if (_disposed) throw StateError('PinJoint has been disposed');
-    bindings.cp_pin_joint_set_anchor_b(_native, anchorB.toNative());
+    cpPinJointSetAnchorB(_native, v.x, v.y);
   }
 
-  /// Distance the joint will maintain between the two anchors.
+  /// The distance between the two anchor points.
   double get distance {
     if (_disposed) throw StateError('PinJoint has been disposed');
-    return bindings.cp_pin_joint_get_dist(_native);
+    return cpPinJointGetDist(_native);
   }
 
+  /// Sets the distance between the two anchor points.
   set distance(double dist) {
     if (_disposed) throw StateError('PinJoint has been disposed');
-    bindings.cp_pin_joint_set_dist(_native, dist);
+    cpPinJointSetDist(_native, dist);
   }
 }
 
-/// A slide joint keeps two anchor points on two bodies within a range of distances from each other.
+/// A slide joint keeps two anchor points within a distance range.
 class SlideJoint extends Constraint {
-  /// Creates a slide joint connecting two bodies at specific anchor points with min/max distance limits.
+  /// Creates a slide joint connecting two bodies with a distance range.
+  ///
+  /// @param a The first body.
+  /// @param b The second body.
+  /// @param anchorA The anchor point on body A in local coordinates.
+  /// @param anchorB The anchor point on body B in local coordinates.
+  /// @param min The minimum allowed distance between the anchor points.
+  /// @param max The maximum allowed distance between the anchor points.
   factory SlideJoint(Body a, Body b, Vector anchorA, Vector anchorB, double min, double max) {
-    final native = bindings.cp_slide_joint_new(
-      a.native,
-      b.native,
-      anchorA.toNative(),
-      anchorB.toNative(),
-      min,
-      max,
-    );
-    if (native.address == 0) {
-      throw Exception('Failed to create slide joint');
-    }
+    final native = cpSlideJointNew(a.native, b.native, anchorA.x, anchorA.y, anchorB.x, anchorB.y, min, max);
+    if (native == 0) throw Exception('Failed to create slide joint');
     return SlideJoint._(native);
   }
 
-  SlideJoint._(ffi.Pointer<bindings.cpConstraint> native) : super._(native);
+  SlideJoint._(super._native) : super._();
 
-  /// Location of the first anchor relative to the first body.
+  /// The anchor point on body A in local coordinates.
   Vector get anchorA {
     if (_disposed) throw StateError('SlideJoint has been disposed');
-    return Vector.fromNative(bindings.cp_slide_joint_get_anchor_a(_native));
+    return cpSlideJointGetAnchorA(_native);
   }
 
-  set anchorA(Vector anchorA) {
+  /// Sets the anchor point on body A in local coordinates.
+  set anchorA(Vector v) {
     if (_disposed) throw StateError('SlideJoint has been disposed');
-    bindings.cp_slide_joint_set_anchor_a(_native, anchorA.toNative());
+    cpSlideJointSetAnchorA(_native, v.x, v.y);
   }
 
-  /// Location of the second anchor relative to the second body.
+  /// The anchor point on body B in local coordinates.
   Vector get anchorB {
     if (_disposed) throw StateError('SlideJoint has been disposed');
-    return Vector.fromNative(bindings.cp_slide_joint_get_anchor_b(_native));
+    return cpSlideJointGetAnchorB(_native);
   }
 
-  set anchorB(Vector anchorB) {
+  /// Sets the anchor point on body B in local coordinates.
+  set anchorB(Vector v) {
     if (_disposed) throw StateError('SlideJoint has been disposed');
-    bindings.cp_slide_joint_set_anchor_b(_native, anchorB.toNative());
+    cpSlideJointSetAnchorB(_native, v.x, v.y);
   }
 
-  /// Minimum distance the joint will maintain between the two anchors.
+  /// The minimum allowed distance between the anchor points.
   double get min {
     if (_disposed) throw StateError('SlideJoint has been disposed');
-    return bindings.cp_slide_joint_get_min(_native);
+    return cpSlideJointGetMin(_native);
   }
 
+  /// Sets the minimum allowed distance between the anchor points.
   set min(double min) {
     if (_disposed) throw StateError('SlideJoint has been disposed');
-    bindings.cp_slide_joint_set_min(_native, min);
+    cpSlideJointSetMin(_native, min);
   }
 
-  /// Maximum distance the joint will maintain between the two anchors.
+  /// The maximum allowed distance between the anchor points.
   double get max {
     if (_disposed) throw StateError('SlideJoint has been disposed');
-    return bindings.cp_slide_joint_get_max(_native);
+    return cpSlideJointGetMax(_native);
   }
 
+  /// Sets the maximum allowed distance between the anchor points.
   set max(double max) {
     if (_disposed) throw StateError('SlideJoint has been disposed');
-    bindings.cp_slide_joint_set_max(_native, max);
+    cpSlideJointSetMax(_native, max);
   }
 }
 
-/// A pivot joint keeps two anchor points on two bodies at the same location.
+/// A pivot joint keeps two anchor points at the same location.
 class PivotJoint extends Constraint {
-  /// Creates a pivot joint connecting two bodies at a common pivot point (in world coordinates).
+  /// Creates a pivot joint at a world point.
+  ///
+  /// @param a The first body.
+  /// @param b The second body.
+  /// @param pivot The pivot point in world coordinates.
   factory PivotJoint.atWorldPoint(Body a, Body b, Vector pivot) {
-    final native = bindings.cp_pivot_joint_new(
-      a.native,
-      b.native,
-      pivot.toNative(),
-    );
-    if (native.address == 0) {
-      throw Exception('Failed to create pivot joint');
-    }
+    final native = cpPivotJointNew(a.native, b.native, pivot.x, pivot.y);
+    if (native == 0) throw Exception('Failed to create pivot joint');
     return PivotJoint._(native);
   }
 
-  /// Creates a pivot joint connecting two bodies at specific anchor points (in body local coordinates).
+  /// Creates a pivot joint at local points on each body.
+  ///
+  /// @param a The first body.
+  /// @param b The second body.
+  /// @param anchorA The anchor point on body A in local coordinates.
+  /// @param anchorB The anchor point on body B in local coordinates.
   factory PivotJoint.atLocalPoints(Body a, Body b, Vector anchorA, Vector anchorB) {
-    final native = bindings.cp_pivot_joint_new2(
-      a.native,
-      b.native,
-      anchorA.toNative(),
-      anchorB.toNative(),
-    );
-    if (native.address == 0) {
-      throw Exception('Failed to create pivot joint');
-    }
+    final native = cpPivotJointNew2(a.native, b.native, anchorA.x, anchorA.y, anchorB.x, anchorB.y);
+    if (native == 0) throw Exception('Failed to create pivot joint');
     return PivotJoint._(native);
   }
 
-  PivotJoint._(ffi.Pointer<bindings.cpConstraint> native) : super._(native);
+  PivotJoint._(super._native) : super._();
 
-  /// Location of the first anchor relative to the first body.
+  /// The anchor point on body A in local coordinates.
   Vector get anchorA {
     if (_disposed) throw StateError('PivotJoint has been disposed');
-    return Vector.fromNative(bindings.cp_pivot_joint_get_anchor_a(_native));
+    return cpPivotJointGetAnchorA(_native);
   }
 
-  set anchorA(Vector anchorA) {
+  /// Sets the anchor point on body A in local coordinates.
+  set anchorA(Vector v) {
     if (_disposed) throw StateError('PivotJoint has been disposed');
-    bindings.cp_pivot_joint_set_anchor_a(_native, anchorA.toNative());
+    cpPivotJointSetAnchorA(_native, v.x, v.y);
   }
 
-  /// Location of the second anchor relative to the second body.
+  /// The anchor point on body B in local coordinates.
   Vector get anchorB {
     if (_disposed) throw StateError('PivotJoint has been disposed');
-    return Vector.fromNative(bindings.cp_pivot_joint_get_anchor_b(_native));
+    return cpPivotJointGetAnchorB(_native);
   }
 
-  set anchorB(Vector anchorB) {
+  /// Sets the anchor point on body B in local coordinates.
+  set anchorB(Vector v) {
     if (_disposed) throw StateError('PivotJoint has been disposed');
-    bindings.cp_pivot_joint_set_anchor_b(_native, anchorB.toNative());
+    cpPivotJointSetAnchorB(_native, v.x, v.y);
   }
 }
 
-/// A groove joint keeps a pivot on one body constrained to a groove on another body.
+/// A groove joint constrains a pivot to a groove.
 class GrooveJoint extends Constraint {
-  /// Creates a groove joint.
-  /// The pivot on body B is constrained to move along the groove defined on body A.
+  /// Creates a groove joint that constrains a pivot to a groove.
+  ///
+  /// @param a The first body (with the groove).
+  /// @param b The second body (with the pivot).
+  /// @param grooveA The start point of the groove on body A in local coordinates.
+  /// @param grooveB The end point of the groove on body A in local coordinates.
+  /// @param anchorB The anchor point on body B in local coordinates.
   factory GrooveJoint(Body a, Body b, Vector grooveA, Vector grooveB, Vector anchorB) {
-    final native = bindings.cp_groove_joint_new(
+    final native = cpGrooveJointNew(
       a.native,
       b.native,
-      grooveA.toNative(),
-      grooveB.toNative(),
-      anchorB.toNative(),
+      grooveA.x,
+      grooveA.y,
+      grooveB.x,
+      grooveB.y,
+      anchorB.x,
+      anchorB.y,
     );
-    if (native.address == 0) {
-      throw Exception('Failed to create groove joint');
-    }
+    if (native == 0) throw Exception('Failed to create groove joint');
     return GrooveJoint._(native);
   }
 
-  GrooveJoint._(ffi.Pointer<bindings.cpConstraint> native) : super._(native);
+  GrooveJoint._(super._native) : super._();
 
-  /// First endpoint of the groove relative to the first body.
+  /// The start point of the groove on body A in local coordinates.
   Vector get grooveA {
     if (_disposed) throw StateError('GrooveJoint has been disposed');
-    return Vector.fromNative(bindings.cp_groove_joint_get_groove_a(_native));
+    return cpGrooveJointGetGrooveA(_native);
   }
 
-  set grooveA(Vector grooveA) {
+  /// Sets the start point of the groove on body A in local coordinates.
+  set grooveA(Vector v) {
     if (_disposed) throw StateError('GrooveJoint has been disposed');
-    bindings.cp_groove_joint_set_groove_a(_native, grooveA.toNative());
+    cpGrooveJointSetGrooveA(_native, v.x, v.y);
   }
 
-  /// Second endpoint of the groove relative to the first body.
+  /// The end point of the groove on body A in local coordinates.
   Vector get grooveB {
     if (_disposed) throw StateError('GrooveJoint has been disposed');
-    return Vector.fromNative(bindings.cp_groove_joint_get_groove_b(_native));
+    return cpGrooveJointGetGrooveB(_native);
   }
 
-  set grooveB(Vector grooveB) {
+  /// Sets the end point of the groove on body A in local coordinates.
+  set grooveB(Vector v) {
     if (_disposed) throw StateError('GrooveJoint has been disposed');
-    bindings.cp_groove_joint_set_groove_b(_native, grooveB.toNative());
+    cpGrooveJointSetGrooveB(_native, v.x, v.y);
   }
 
-  /// Location of the pivot anchor relative to the second body.
+  /// The anchor point on body B in local coordinates.
   Vector get anchorB {
     if (_disposed) throw StateError('GrooveJoint has been disposed');
-    return Vector.fromNative(bindings.cp_groove_joint_get_anchor_b(_native));
+    return cpGrooveJointGetAnchorB(_native);
   }
 
-  set anchorB(Vector anchorB) {
+  /// Sets the anchor point on body B in local coordinates.
+  set anchorB(Vector v) {
     if (_disposed) throw StateError('GrooveJoint has been disposed');
-    bindings.cp_groove_joint_set_anchor_b(_native, anchorB.toNative());
+    cpGrooveJointSetAnchorB(_native, v.x, v.y);
   }
 }
 
-/// A damped spring connects two bodies with a spring force.
+/// A damped spring connects two bodies with spring force.
 class DampedSpring extends Constraint {
   /// Creates a damped spring connecting two bodies.
+  ///
+  /// @param a The first body.
+  /// @param b The second body.
+  /// @param anchorA The anchor point on body A in local coordinates.
+  /// @param anchorB The anchor point on body B in local coordinates.
+  /// @param restLength The rest length of the spring.
+  /// @param stiffness The spring stiffness (force per unit length).
+  /// @param damping The damping coefficient.
   factory DampedSpring(
     Body a,
     Body b,
@@ -334,297 +346,297 @@ class DampedSpring extends Constraint {
     double stiffness,
     double damping,
   ) {
-    final native = bindings.cp_damped_spring_new(
+    final native = cpDampedSpringNew(
       a.native,
       b.native,
-      anchorA.toNative(),
-      anchorB.toNative(),
+      anchorA.x,
+      anchorA.y,
+      anchorB.x,
+      anchorB.y,
       restLength,
       stiffness,
       damping,
     );
-    if (native.address == 0) {
-      throw Exception('Failed to create damped spring');
-    }
+    if (native == 0) throw Exception('Failed to create damped spring');
     return DampedSpring._(native);
   }
 
-  DampedSpring._(ffi.Pointer<bindings.cpConstraint> native) : super._(native);
+  DampedSpring._(super._native) : super._();
 
-  /// Location of the first anchor relative to the first body.
+  /// The anchor point on body A in local coordinates.
   Vector get anchorA {
     if (_disposed) throw StateError('DampedSpring has been disposed');
-    return Vector.fromNative(bindings.cp_damped_spring_get_anchor_a(_native));
+    return cpDampedSpringGetAnchorA(_native);
   }
 
-  set anchorA(Vector anchorA) {
+  /// Sets the anchor point on body A in local coordinates.
+  set anchorA(Vector v) {
     if (_disposed) throw StateError('DampedSpring has been disposed');
-    bindings.cp_damped_spring_set_anchor_a(_native, anchorA.toNative());
+    cpDampedSpringSetAnchorA(_native, v.x, v.y);
   }
 
-  /// Location of the second anchor relative to the second body.
+  /// The anchor point on body B in local coordinates.
   Vector get anchorB {
     if (_disposed) throw StateError('DampedSpring has been disposed');
-    return Vector.fromNative(bindings.cp_damped_spring_get_anchor_b(_native));
+    return cpDampedSpringGetAnchorB(_native);
   }
 
-  set anchorB(Vector anchorB) {
+  /// Sets the anchor point on body B in local coordinates.
+  set anchorB(Vector v) {
     if (_disposed) throw StateError('DampedSpring has been disposed');
-    bindings.cp_damped_spring_set_anchor_b(_native, anchorB.toNative());
+    cpDampedSpringSetAnchorB(_native, v.x, v.y);
   }
 
-  /// Rest length of the spring.
+  /// The rest length of the spring.
   double get restLength {
     if (_disposed) throw StateError('DampedSpring has been disposed');
-    return bindings.cp_damped_spring_get_rest_length(_native);
+    return cpDampedSpringGetRestLength(_native);
   }
 
-  set restLength(double restLength) {
+  /// Sets the rest length of the spring.
+  set restLength(double v) {
     if (_disposed) throw StateError('DampedSpring has been disposed');
-    bindings.cp_damped_spring_set_rest_length(_native, restLength);
+    cpDampedSpringSetRestLength(_native, v);
   }
 
-  /// Stiffness of the spring in force/distance.
+  /// The spring stiffness (force per unit length).
   double get stiffness {
     if (_disposed) throw StateError('DampedSpring has been disposed');
-    return bindings.cp_damped_spring_get_stiffness(_native);
+    return cpDampedSpringGetStiffness(_native);
   }
 
-  set stiffness(double stiffness) {
+  /// Sets the spring stiffness (force per unit length).
+  set stiffness(double v) {
     if (_disposed) throw StateError('DampedSpring has been disposed');
-    bindings.cp_damped_spring_set_stiffness(_native, stiffness);
+    cpDampedSpringSetStiffness(_native, v);
   }
 
-  /// Damping of the spring.
+  /// The damping coefficient.
   double get damping {
     if (_disposed) throw StateError('DampedSpring has been disposed');
-    return bindings.cp_damped_spring_get_damping(_native);
+    return cpDampedSpringGetDamping(_native);
   }
 
-  set damping(double damping) {
+  /// Sets the damping coefficient.
+  set damping(double v) {
     if (_disposed) throw StateError('DampedSpring has been disposed');
-    bindings.cp_damped_spring_set_damping(_native, damping);
+    cpDampedSpringSetDamping(_native, v);
   }
 }
 
-/// A damped rotary spring connects two bodies with a rotational spring force.
+/// A damped rotary spring connects two bodies with rotational spring force.
 class DampedRotarySpring extends Constraint {
   /// Creates a damped rotary spring connecting two bodies.
-  factory DampedRotarySpring(
-    Body a,
-    Body b,
-    double restAngle,
-    double stiffness,
-    double damping,
-  ) {
-    final native = bindings.cp_damped_rotary_spring_new(
-      a.native,
-      b.native,
-      restAngle,
-      stiffness,
-      damping,
-    );
-    if (native.address == 0) {
-      throw Exception('Failed to create damped rotary spring');
-    }
+  ///
+  /// @param a The first body.
+  /// @param b The second body.
+  /// @param restAngle The rest angle of the spring in radians.
+  /// @param stiffness The spring stiffness (torque per radian).
+  /// @param damping The damping coefficient.
+  factory DampedRotarySpring(Body a, Body b, double restAngle, double stiffness, double damping) {
+    final native = cpDampedRotarySpringNew(a.native, b.native, restAngle, stiffness, damping);
+    if (native == 0) throw Exception('Failed to create damped rotary spring');
     return DampedRotarySpring._(native);
   }
 
-  DampedRotarySpring._(ffi.Pointer<bindings.cpConstraint> native) : super._(native);
+  DampedRotarySpring._(super._native) : super._();
 
-  /// Rest angle of the spring in radians.
+  /// The rest angle of the spring in radians.
   double get restAngle {
     if (_disposed) throw StateError('DampedRotarySpring has been disposed');
-    return bindings.cp_damped_rotary_spring_get_rest_angle(_native);
+    return cpDampedRotarySpringGetRestAngle(_native);
   }
 
-  set restAngle(double restAngle) {
+  /// Sets the rest angle of the spring in radians.
+  set restAngle(double v) {
     if (_disposed) throw StateError('DampedRotarySpring has been disposed');
-    bindings.cp_damped_rotary_spring_set_rest_angle(_native, restAngle);
+    cpDampedRotarySpringSetRestAngle(_native, v);
   }
 
-  /// Stiffness of the spring.
+  /// The spring stiffness (torque per radian).
   double get stiffness {
     if (_disposed) throw StateError('DampedRotarySpring has been disposed');
-    return bindings.cp_damped_rotary_spring_get_stiffness(_native);
+    return cpDampedRotarySpringGetStiffness(_native);
   }
 
-  set stiffness(double stiffness) {
+  /// Sets the spring stiffness (torque per radian).
+  set stiffness(double v) {
     if (_disposed) throw StateError('DampedRotarySpring has been disposed');
-    bindings.cp_damped_rotary_spring_set_stiffness(_native, stiffness);
+    cpDampedRotarySpringSetStiffness(_native, v);
   }
 
-  /// Damping of the spring.
+  /// The damping coefficient.
   double get damping {
     if (_disposed) throw StateError('DampedRotarySpring has been disposed');
-    return bindings.cp_damped_rotary_spring_get_damping(_native);
+    return cpDampedRotarySpringGetDamping(_native);
   }
 
-  set damping(double damping) {
+  /// Sets the damping coefficient.
+  set damping(double v) {
     if (_disposed) throw StateError('DampedRotarySpring has been disposed');
-    bindings.cp_damped_rotary_spring_set_damping(_native, damping);
+    cpDampedRotarySpringSetDamping(_native, v);
   }
 }
 
 /// A rotary limit joint limits the angular rotation between two bodies.
 class RotaryLimitJoint extends Constraint {
-  /// Creates a rotary limit joint connecting two bodies.
+  /// Creates a rotary limit joint that limits angular rotation.
+  ///
+  /// @param a The first body.
+  /// @param b The second body.
+  /// @param min The minimum allowed angle in radians.
+  /// @param max The maximum allowed angle in radians.
   factory RotaryLimitJoint(Body a, Body b, double min, double max) {
-    final native = bindings.cp_rotary_limit_joint_new(
-      a.native,
-      b.native,
-      min,
-      max,
-    );
-    if (native.address == 0) {
-      throw Exception('Failed to create rotary limit joint');
-    }
+    final native = cpRotaryLimitJointNew(a.native, b.native, min, max);
+    if (native == 0) throw Exception('Failed to create rotary limit joint');
     return RotaryLimitJoint._(native);
   }
 
-  RotaryLimitJoint._(ffi.Pointer<bindings.cpConstraint> native) : super._(native);
+  RotaryLimitJoint._(super._native) : super._();
 
-  /// Minimum angle in radians.
+  /// The minimum allowed angle in radians.
   double get min {
     if (_disposed) throw StateError('RotaryLimitJoint has been disposed');
-    return bindings.cp_rotary_limit_joint_get_min(_native);
+    return cpRotaryLimitJointGetMin(_native);
   }
 
-  set min(double min) {
+  /// Sets the minimum allowed angle in radians.
+  set min(double v) {
     if (_disposed) throw StateError('RotaryLimitJoint has been disposed');
-    bindings.cp_rotary_limit_joint_set_min(_native, min);
+    cpRotaryLimitJointSetMin(_native, v);
   }
 
-  /// Maximum angle in radians.
+  /// The maximum allowed angle in radians.
   double get max {
     if (_disposed) throw StateError('RotaryLimitJoint has been disposed');
-    return bindings.cp_rotary_limit_joint_get_max(_native);
+    return cpRotaryLimitJointGetMax(_native);
   }
 
-  set max(double max) {
+  /// Sets the maximum allowed angle in radians.
+  set max(double v) {
     if (_disposed) throw StateError('RotaryLimitJoint has been disposed');
-    bindings.cp_rotary_limit_joint_set_max(_native, max);
+    cpRotaryLimitJointSetMax(_native, v);
   }
 }
 
 /// A ratchet joint is a rotary constraint that acts like a socket wrench.
 class RatchetJoint extends Constraint {
   /// Creates a ratchet joint connecting two bodies.
+  ///
+  /// @param a The first body.
+  /// @param b The second body.
+  /// @param phase The initial phase offset in radians.
+  /// @param ratchet The ratchet angle in radians (the "click" size).
   factory RatchetJoint(Body a, Body b, double phase, double ratchet) {
-    final native = bindings.cp_ratchet_joint_new(
-      a.native,
-      b.native,
-      phase,
-      ratchet,
-    );
-    if (native.address == 0) {
-      throw Exception('Failed to create ratchet joint');
-    }
+    final native = cpRatchetJointNew(a.native, b.native, phase, ratchet);
+    if (native == 0) throw Exception('Failed to create ratchet joint');
     return RatchetJoint._(native);
   }
 
-  RatchetJoint._(ffi.Pointer<bindings.cpConstraint> native) : super._(native);
+  RatchetJoint._(super._native) : super._();
 
-  /// Current angle in radians.
+  /// The current angle in radians.
   double get angle {
     if (_disposed) throw StateError('RatchetJoint has been disposed');
-    return bindings.cp_ratchet_joint_get_angle(_native);
+    return cpRatchetJointGetAngle(_native);
   }
 
-  set angle(double angle) {
+  /// Sets the current angle in radians.
+  set angle(double v) {
     if (_disposed) throw StateError('RatchetJoint has been disposed');
-    bindings.cp_ratchet_joint_set_angle(_native, angle);
+    cpRatchetJointSetAngle(_native, v);
   }
 
-  /// Phase offset in radians.
+  /// The phase offset in radians.
   double get phase {
     if (_disposed) throw StateError('RatchetJoint has been disposed');
-    return bindings.cp_ratchet_joint_get_phase(_native);
+    return cpRatchetJointGetPhase(_native);
   }
 
-  set phase(double phase) {
+  /// Sets the phase offset in radians.
+  set phase(double v) {
     if (_disposed) throw StateError('RatchetJoint has been disposed');
-    bindings.cp_ratchet_joint_set_phase(_native, phase);
+    cpRatchetJointSetPhase(_native, v);
   }
 
-  /// Ratchet angle in radians.
+  /// The ratchet angle in radians (the "click" size).
   double get ratchet {
     if (_disposed) throw StateError('RatchetJoint has been disposed');
-    return bindings.cp_ratchet_joint_get_ratchet(_native);
+    return cpRatchetJointGetRatchet(_native);
   }
 
-  set ratchet(double ratchet) {
+  /// Sets the ratchet angle in radians (the "click" size).
+  set ratchet(double v) {
     if (_disposed) throw StateError('RatchetJoint has been disposed');
-    bindings.cp_ratchet_joint_set_ratchet(_native, ratchet);
+    cpRatchetJointSetRatchet(_native, v);
   }
 }
 
-/// A gear joint keeps the angular velocity ratio of a pair of bodies constant.
+/// A gear joint keeps the angular velocity ratio of two bodies constant.
 class GearJoint extends Constraint {
   /// Creates a gear joint connecting two bodies.
+  ///
+  /// @param a The first body.
+  /// @param b The second body.
+  /// @param phase The initial phase offset in radians.
+  /// @param ratio The gear ratio (angular velocity of body B / angular velocity of body A).
   factory GearJoint(Body a, Body b, double phase, double ratio) {
-    final native = bindings.cp_gear_joint_new(
-      a.native,
-      b.native,
-      phase,
-      ratio,
-    );
-    if (native.address == 0) {
-      throw Exception('Failed to create gear joint');
-    }
+    final native = cpGearJointNew(a.native, b.native, phase, ratio);
+    if (native == 0) throw Exception('Failed to create gear joint');
     return GearJoint._(native);
   }
 
-  GearJoint._(ffi.Pointer<bindings.cpConstraint> native) : super._(native);
+  GearJoint._(super._native) : super._();
 
-  /// Phase offset in radians.
+  /// The phase offset in radians.
   double get phase {
     if (_disposed) throw StateError('GearJoint has been disposed');
-    return bindings.cp_gear_joint_get_phase(_native);
+    return cpGearJointGetPhase(_native);
   }
 
-  set phase(double phase) {
+  /// Sets the phase offset in radians.
+  set phase(double v) {
     if (_disposed) throw StateError('GearJoint has been disposed');
-    bindings.cp_gear_joint_set_phase(_native, phase);
+    cpGearJointSetPhase(_native, v);
   }
 
-  /// Angular velocity ratio.
+  /// The gear ratio (angular velocity of body B / angular velocity of body A).
   double get ratio {
     if (_disposed) throw StateError('GearJoint has been disposed');
-    return bindings.cp_gear_joint_get_ratio(_native);
+    return cpGearJointGetRatio(_native);
   }
 
-  set ratio(double ratio) {
+  /// Sets the gear ratio (angular velocity of body B / angular velocity of body A).
+  set ratio(double v) {
     if (_disposed) throw StateError('GearJoint has been disposed');
-    bindings.cp_gear_joint_set_ratio(_native, ratio);
+    cpGearJointSetRatio(_native, v);
   }
 }
 
 /// A simple motor maintains a constant angular velocity between two bodies.
 class SimpleMotor extends Constraint {
   /// Creates a simple motor connecting two bodies.
+  ///
+  /// @param a The first body.
+  /// @param b The second body.
+  /// @param rate The target relative angular velocity in radians per second.
   factory SimpleMotor(Body a, Body b, double rate) {
-    final native = bindings.cp_simple_motor_new(
-      a.native,
-      b.native,
-      rate,
-    );
-    if (native.address == 0) {
-      throw Exception('Failed to create simple motor');
-    }
+    final native = cpSimpleMotorNew(a.native, b.native, rate);
+    if (native == 0) throw Exception('Failed to create simple motor');
     return SimpleMotor._(native);
   }
 
-  SimpleMotor._(ffi.Pointer<bindings.cpConstraint> native) : super._(native);
+  SimpleMotor._(super._native) : super._();
 
-  /// Rate of the motor in radians per second.
+  /// The target relative angular velocity in radians per second.
   double get rate {
     if (_disposed) throw StateError('SimpleMotor has been disposed');
-    return bindings.cp_simple_motor_get_rate(_native);
+    return cpSimpleMotorGetRate(_native);
   }
 
-  set rate(double rate) {
+  /// Sets the target relative angular velocity in radians per second.
+  set rate(double v) {
     if (_disposed) throw StateError('SimpleMotor has been disposed');
-    bindings.cp_simple_motor_set_rate(_native, rate);
+    cpSimpleMotorSetRate(_native, v);
   }
 }
