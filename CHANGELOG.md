@@ -1,3 +1,8 @@
+## 1.0.1
+
+* Minor updates to pubspec.yaml (added repository and issue_tracker fields)
+* Merged download_prebuilt.dart into build.dart
+
 ## 1.0.0
 
 * Initial release of chipmunk2d_physics_ffi

@@ -34,7 +34,7 @@ Add this package to your `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  chipmunk2d_physics_ffi: ^1.0.0
+  chipmunk2d_physics_ffi: ^1.0.1
 ```
 
 Then run:
