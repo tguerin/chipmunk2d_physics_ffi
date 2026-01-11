@@ -384,8 +384,9 @@ This package supports:
 
 ### Web Support
 
-On web, you **must** call `initializeChipmunk()` before using any Chipmunk2D
-functions:
+On web, you **must**:
+
+1. **Call `initializeChipmunk()`** before using any Chipmunk2D functions:
 
 ```dart
 void main() async {
@@ -396,6 +397,17 @@ void main() async {
   
   runApp(MyApp());
 }
+```
+
+2. **Include the `_dynamicImport` helper** in your `web/index.html` file:
+
+```html
+<script>
+  // Required: Dart's js_interop cannot directly call the top-level import() function.
+  // This wrapper exposes import() as a window property so Dart can access it.
+  // Without this, the Chipmunk2D WASM module cannot be loaded on web.
+  window._dynamicImport = (path) => import(path);
+</script>
 ```
 
 The WASM module is automatically included in your Flutter web build - no
