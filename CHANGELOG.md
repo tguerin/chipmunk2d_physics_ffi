@@ -1,3 +1,9 @@
+## 1.0.3
+
+* Simplified `_dynamicImport` wrapper in web/index.html (now a one-liner)
+* Added documentation requirement for web platform: `_dynamicImport` helper must be included in `web/index.html`
+* Improved README with clear web setup instructions
+
 ## 1.0.2
 
 * Removed unused dependencies (native_toolchain_c, path_provider)

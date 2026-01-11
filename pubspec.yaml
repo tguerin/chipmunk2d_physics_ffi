@@ -1,6 +1,6 @@
 name: chipmunk2d_physics_ffi
 description: Flutter FFI plugin for Chipmunk2D physics engine - a lightweight 2D physics library
-version: 1.0.2
+version: 1.0.3
 homepage: https://github.com/tguerin/chipmunk2d_physics_ffi
 repository: https://github.com/tguerin/chipmunk2d_physics_ffi
 issue_tracker: https://github.com/tguerin/chipmunk2d_physics_ffi/issues
