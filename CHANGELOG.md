@@ -1,3 +1,8 @@
+## 1.0.2
+
+* Removed unused dependencies (native_toolchain_c, path_provider)
+* Cleaned up dependency list to only include required packages
+
 ## 1.0.1
 
 * Minor updates to pubspec.yaml (added repository and issue_tracker fields)
