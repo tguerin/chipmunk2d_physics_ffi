@@ -1,0 +1,4 @@
+# Flutter SDK for local dev & CI alignment (https://mise.jdx.dev)
+# Run: mise install
+[tools]
+flutter = "3.41.5"
