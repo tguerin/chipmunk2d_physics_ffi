@@ -987,7 +987,7 @@ class _LogoSmashDemoState extends State<LogoSmashDemo> with SingleTickerProvider
   void _createLogoBalls(Space space) {
     final random = math.Random();
     const ballRadius = 0.95;
-    const maxBalls = 2500;
+    const maxBalls = 2000;
 
     final pixels = <(int, int)>[];
     for (var y = 0; y < _imageHeight; y++) {
