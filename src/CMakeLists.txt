@@ -47,6 +47,9 @@ target_include_directories(${PROJECT_NAME} PRIVATE
 if(ANDROID)
     find_library(log_lib log)
     target_link_libraries(${PROJECT_NAME} PRIVATE ${log_lib})
+    # Google Play / Android 15+: shared libraries must be 16 KB page-size compatible.
+    # See https://developer.android.com/guide/practices/page-sizes
+    target_link_options(${PROJECT_NAME} PRIVATE -Wl,-z,max-page-size=16384)
 endif()
 
 # 7. Compile Parameters
