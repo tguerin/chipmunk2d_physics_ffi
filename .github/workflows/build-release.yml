@@ -148,7 +148,8 @@ jobs:
       - name: Build
         run: |
           cmake -B build -S src -DCMAKE_BUILD_TYPE=Release -DCMAKE_SYSTEM_NAME=Android \
-            -DCMAKE_ANDROID_ARCH_ABI=${{ matrix.arch }} -DCMAKE_ANDROID_NDK=$ANDROID_NDK_ROOT -DCMAKE_ANDROID_STL_TYPE=c++_static
+            -DCMAKE_ANDROID_ARCH_ABI=${{ matrix.arch }} -DCMAKE_ANDROID_NDK=$ANDROID_NDK_ROOT -DCMAKE_ANDROID_STL_TYPE=c++_static \
+            -DANDROID_SUPPORT_FLEXIBLE_PAGE_SIZES=ON
           cmake --build build --config Release
       - name: Package
         run: |
