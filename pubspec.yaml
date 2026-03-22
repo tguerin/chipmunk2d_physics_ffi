@@ -1,12 +1,12 @@
 name: chipmunk2d_physics_ffi
 description: Flutter FFI plugin for Chipmunk2D physics engine - a lightweight 2D physics library
-version: 1.0.3
+version: 1.0.4
 homepage: https://github.com/tguerin/chipmunk2d_physics_ffi
 repository: https://github.com/tguerin/chipmunk2d_physics_ffi
 issue_tracker: https://github.com/tguerin/chipmunk2d_physics_ffi/issues
 
 # Chipmunk2D version this package is built with
-chipmunk2d_version: 7.0.3-patch.1
+chipmunk2d_version: 7.0.3-patch.2
 
 # Native assets configuration
 # Native assets are configured via the build hook in hook/build.dart
@@ -35,9 +35,9 @@ dev_dependencies:
   very_good_analysis: ^10.0.0
 
 flutter:
-  # Register web assets for automatic inclusion in web builds
-  # Waiting for https://github.com/flutter/flutter/pull/176393
-  # so we include these assets only on web.
+  # Web Emscripten outputs. Listed for all platforms so older Flutter SDKs stay supported.
+  # When Flutter 3.41+ is a reasonable minimum, switch entries to `path:` + `platforms: [web]`
+  # so non-web builds omit these files (see Flutter 3.41 release notes).
   assets:
     - assets/web/chipmunk2d_physics_ffi.js
     - assets/web/chipmunk2d_physics_ffi.wasm

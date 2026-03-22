@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       chipmunk_version:
-        description: 'Chipmunk2D Version (e.g., 7.0.3 or 7.0.3-patch.1 for patched)'
+        description: 'Chipmunk2D Version (e.g., 7.0.3 or 7.0.3-patch.2 for patched)'
         required: true
         type: string
         default: '7.0.3'

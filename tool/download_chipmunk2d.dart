@@ -9,7 +9,7 @@ void main(List<String> args) async {
   if (args.isEmpty) {
     print('Usage: dart tool/download_chipmunk2d.dart <version>');
     print('Example: dart tool/download_chipmunk2d.dart 7.0.3');
-    print('Example: dart tool/download_chipmunk2d.dart 7.0.3-patch.1');
+    print('Example: dart tool/download_chipmunk2d.dart 7.0.3-patch.2');
     exit(1);
   }
 
