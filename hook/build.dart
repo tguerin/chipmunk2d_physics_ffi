@@ -149,8 +149,9 @@ String _mapArchName(Architecture arch, OS os, IOSSdk? iosTargetSdk) {
       if (os == OS.android) return 'arm64-v8a';
       return 'arm64';
     case Architecture.x64:
-      if (os == OS.linux) return 'x64';
       if (os == OS.android) return 'x86_64';
+      if (os == OS.linux || os == OS.windows) return 'x64';
+      // macOS Intel artifacts use x86_64 (see build-release.yml)
       return 'x86_64';
     default:
       // Handle other architectures by name
